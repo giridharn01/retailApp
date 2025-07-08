@@ -14,32 +14,31 @@ const allowedOrigins = [
   'http://localhost:3000'   // Local development
 ].filter(Boolean);
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-  }
+    if (allowedOrigins.indexOf(origin) === -1) {
+      return callback(new Error('Not allowed by CORS'), false);
+    }
+    return callback(null, true);
   },
   credentials: true
-}));
+};
+
+app.use(cors(corsOptions));
 
 // Middleware
 app.use(express.json());
 
-// Routes (with /api prefix)
-app.use('/api/auth', require('./src/routes/auth'));
-app.use('/api/users', require('./src/routes/users'));
-app.use('/api/products', require('./src/routes/products'));
-app.use('/api/cart', require('./src/routes/cart'));
-app.use('/api/orders', require('./src/routes/orders'));
-app.use('/api/service-requests', require('./src/routes/services'));
-app.use('/api/service-types', require('./src/routes/serviceTypes'));
-app.use('/api/equipment-types', require('./src/routes/equipmentTypes'));
+// Routes (without /api prefix)
+app.use('/auth', require('./src/routes/auth'));
+app.use('/users', require('./src/routes/users'));
+app.use('/products', require('./src/routes/products'));
+app.use('/cart', require('./src/routes/cart'));
+app.use('/orders', require('./src/routes/orders'));
+app.use('/service-requests', require('./src/routes/services'));
+app.use('/service-types', require('./src/routes/serviceTypes'));
+app.use('/equipment-types', require('./src/routes/equipmentTypes'));
 
 // Basic route for checking if the server is running
 app.get('/', (req, res) => {
