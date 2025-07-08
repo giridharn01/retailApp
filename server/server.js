@@ -14,12 +14,19 @@ const allowedOrigins = [
   'http://localhost:3000'   // Local development
 ].filter(Boolean);
 
+// Debug logging
+console.log('FRONTEND_URL from env:', process.env.FRONTEND_URL);
+console.log('Allowed origins:', allowedOrigins);
+
 const corsOptions = {
   origin: (origin, callback) => {
+    console.log('CORS request from origin:', origin);
     if (!origin) return callback(null, true);
     if (allowedOrigins.indexOf(origin) === -1) {
+      console.log('CORS blocked origin:', origin);
       return callback(new Error('Not allowed by CORS'), false);
     }
+    console.log('CORS allowed origin:', origin);
     return callback(null, true);
   },
   credentials: true
