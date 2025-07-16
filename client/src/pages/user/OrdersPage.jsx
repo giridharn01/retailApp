@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { apiRequest } from '../../utils/api';
-import { io } from 'socket.io-client';
 
 const OrdersPage = () => {
     const [orders, setOrders] = useState([]);
@@ -21,16 +20,25 @@ const OrdersPage = () => {
         }
     }, [location.state]);
 
-    // --- Socket.IO real-time updates ---
+    // --- Polling-based real-time updates (Vercel-compatible) ---
     useEffect(() => {
-        const socket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000', {
-            withCredentials: true,
-        });
-        socket.on('orderStatusChanged', (event) => {
+        console.log('OrdersPage setting up polling for real-time updates');
+        
+        // Poll for updates every 15 seconds
+        const pollInterval = setInterval(() => {
             fetchOrders(true); // Silent refresh
-        });
+        }, 15000);
+
+        // Also poll when user focuses back on the tab
+        const handleFocus = () => {
+            fetchOrders(true);
+        };
+
+        window.addEventListener('focus', handleFocus);
+
         return () => {
-            socket.disconnect();
+            clearInterval(pollInterval);
+            window.removeEventListener('focus', handleFocus);
         };
     }, []);
 

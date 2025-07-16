@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { apiRequest } from '../../utils/api';
-import { io } from 'socket.io-client';
 
 const statusOptions = [
   { value: 'pending', label: 'Pending' },
@@ -27,17 +26,27 @@ const AdminOrderManagementPage = () => {
         fetchStats();
     }, []);
 
-    // --- Socket.IO real-time updates ---
+    // --- Polling-based real-time updates (Vercel-compatible) ---
     useEffect(() => {
-        const socket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000', {
-            withCredentials: true,
-        });
-        socket.on('orderStatusChanged', (event) => {
+        console.log('AdminOrderManagementPage setting up polling for real-time updates');
+        
+        // Poll for updates every 20 seconds for admin pages
+        const pollInterval = setInterval(() => {
             fetchOrders(true);
             fetchStats();
-        });
+        }, 20000);
+
+        // Also poll when admin focuses back on the tab
+        const handleFocus = () => {
+            fetchOrders(true);
+            fetchStats();
+        };
+
+        window.addEventListener('focus', handleFocus);
+
         return () => {
-            socket.disconnect();
+            clearInterval(pollInterval);
+            window.removeEventListener('focus', handleFocus);
         };
     }, []);
 

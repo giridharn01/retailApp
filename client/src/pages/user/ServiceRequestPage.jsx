@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { apiRequest } from '../../utils/api';
-import { io } from 'socket.io-client';
 
 
 const statusColors = {
@@ -19,6 +18,7 @@ const ServiceRequestPage = React.memo(() => {
   const [serviceRequests, setServiceRequests] = useState([]);
   const [statusUpdates, setStatusUpdates] = useState([]);
   const [showUpdateNotification, setShowUpdateNotification] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
   const prevRequestsRef = useRef([]);
 
   const [formData, setFormData] = useState({
@@ -70,6 +70,9 @@ const ServiceRequestPage = React.memo(() => {
       }
       setServiceRequests(newRequests);
       prevRequestsRef.current = newRequests;
+      if (silent) {
+        setLastUpdated(new Date());
+      }
     } catch (err) {
       setError('Failed to fetch your service requests');
     } finally {
@@ -84,35 +87,25 @@ const ServiceRequestPage = React.memo(() => {
     fetchUserRequests();
   }, [fetchServiceData, fetchUserRequests]);
 
-  // --- Socket.IO real-time updates ---
+  // --- Polling-based real-time updates (Vercel-compatible) ---
   useEffect(() => {
-    // Connect to Socket.IO server (remove /api from URL since Socket.IO is on root)
-    const socketUrl = process.env.REACT_APP_API_URL 
-      ? process.env.REACT_APP_API_URL.replace('/api', '')
-      : 'http://localhost:5000';
+    console.log('Setting up polling for real-time updates');
     
-    const socket = io(socketUrl, {
-      withCredentials: true,
-    });
-
-    console.log('Connecting to Socket.IO at:', socketUrl);
-
-    // Listen for service request status changes
-    socket.on('serviceRequestStatusChanged', (event) => {
-      console.log('Status update received:', event);
+    // Poll for updates every 10 seconds
+    const pollInterval = setInterval(() => {
       fetchUserRequests(true); // Silent refresh
-    });
+    }, 10000);
 
-    socket.on('connect', () => {
-      console.log('Socket.IO connected successfully');
-    });
+    // Also poll when user focuses back on the tab
+    const handleFocus = () => {
+      fetchUserRequests(true);
+    };
 
-    socket.on('connect_error', (error) => {
-      console.log('Socket.IO connection error:', error);
-    });
+    window.addEventListener('focus', handleFocus);
 
     return () => {
-      socket.disconnect();
+      clearInterval(pollInterval);
+      window.removeEventListener('focus', handleFocus);
     };
   }, [fetchUserRequests]);
 
@@ -183,6 +176,7 @@ const ServiceRequestPage = React.memo(() => {
                     {update.serviceType}: {update.oldStatus} → {update.newStatus}
                   </div>
                 ))}
+                <div className="text-xs mt-1 opacity-75">Auto-refreshed</div>
               </div>
             </div>
             <button
@@ -329,6 +323,12 @@ const ServiceRequestPage = React.memo(() => {
           <div className="flex-1 bg-white rounded-lg shadow-md p-6 mt-8 lg:mt-0">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
               <h2 className="text-xl font-semibold text-gray-800">Your Service Requests</h2>
+              {lastUpdated && (
+                <div className="text-xs text-gray-500 flex items-center">
+                  <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
+                  Last updated: {lastUpdated.toLocaleTimeString()}
+                </div>
+              )}
             </div>
             {serviceRequests.length === 0 ? (
               <div className="text-center py-12">

@@ -92,10 +92,6 @@ exports.createServiceRequest = async (req, res) => {
             user: req.user.id
         });
 
-        // Emit real-time event
-        const io = req.app.get('io');
-        io.emit('serviceRequestStatusChanged', { type: 'created', data: serviceRequest });
-
         res.status(201).json({
             success: true,
             data: serviceRequest
@@ -135,10 +131,6 @@ exports.updateServiceRequest = async (req, res) => {
                 error: 'Service request not found'
             });
         }
-
-        // Emit real-time event
-        const io = req.app.get('io');
-        io.emit('serviceRequestStatusChanged', { type: 'updated', data: serviceRequest });
 
         res.json({
             success: true,
@@ -188,10 +180,6 @@ exports.cancelServiceRequest = async (req, res) => {
             note: 'Service request cancelled by user'
         });
         await serviceRequest.save();
-
-        // Emit real-time event
-        const io = req.app.get('io');
-        io.emit('serviceRequestStatusChanged', { type: 'cancelled', data: serviceRequest });
 
         res.json({
             success: true,
