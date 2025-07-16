@@ -14,6 +14,18 @@ const serviceRequestSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Please provide a description of the service needed']
     },
+    preferredDate: {
+        type: Date,
+        required: [true, 'Please specify preferred date']
+    },
+    preferredTime: {
+        type: String,
+        required: [true, 'Please specify preferred time']
+    },
+    contactNumber: {
+        type: String,
+        required: [true, 'Please provide contact number']
+    },
     status: {
         type: String,
         enum: ['pending', 'assigned', 'in-progress', 'completed', 'cancelled'],

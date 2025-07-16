@@ -87,9 +87,44 @@ exports.getServiceRequest = async (req, res) => {
 // @access  Private
 exports.createServiceRequest = async (req, res) => {
     try {
+        console.log('Creating service request with data:', req.body);
+        
+        // Validate and parse the preferred date
+        const { preferredDate, preferredTime, serviceType, description, contactNumber } = req.body;
+        
+        if (!preferredDate || !preferredTime || !serviceType || !description || !contactNumber) {
+            return res.status(400).json({
+                success: false,
+                error: 'All fields are required'
+            });
+        }
+        
+        // Parse the date to ensure it's valid
+        const parsedDate = new Date(preferredDate);
+        if (isNaN(parsedDate.getTime())) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid date format'
+            });
+        }
+        
+        // Check if date is not in the past
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (parsedDate < today) {
+            return res.status(400).json({
+                success: false,
+                error: 'Preferred date cannot be in the past'
+            });
+        }
+        
         const serviceRequest = await ServiceRequest.create({
-            ...req.body,
-            user: req.user.id
+            user: req.user.id,
+            serviceType,
+            description,
+            preferredDate: parsedDate,
+            preferredTime,
+            contactNumber
         });
 
         res.status(201).json({
@@ -97,6 +132,7 @@ exports.createServiceRequest = async (req, res) => {
             data: serviceRequest
         });
     } catch (error) {
+        console.error('Service request creation error:', error);
         res.status(500).json({
             success: false,
             error: error.message

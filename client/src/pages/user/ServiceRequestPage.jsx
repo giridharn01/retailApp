@@ -110,9 +110,16 @@ const ServiceRequestPage = React.memo(() => {
   }, [fetchUserRequests]);
 
   const handleChange = useCallback((e) => {
+    const { name, value } = e.target;
+    
+    // Debug logging for date/time changes
+    if (name === 'preferredDate' || name === 'preferredTime') {
+      console.log(`${name} changed to:`, value);
+    }
+    
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: value
     });
   }, [formData]);
 
@@ -141,8 +148,41 @@ const ServiceRequestPage = React.memo(() => {
     setLoading(true);
     setError(null);
     setSuccess('');
+    
+    // Debug logging
+    console.log('Form data being submitted:', formData);
+    
+    // Additional validation
+    if (!formData.preferredDate) {
+      setError('Please select a preferred date');
+      setLoading(false);
+      return;
+    }
+    
+    if (!formData.preferredTime) {
+      setError('Please select a preferred time slot');
+      setLoading(false);
+      return;
+    }
+    
+    // Validate date is not in the past
+    const selectedDate = new Date(formData.preferredDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    console.log('Selected date:', selectedDate);
+    console.log('Today:', today);
+    
+    if (selectedDate < today) {
+      setError('Preferred date cannot be in the past');
+      setLoading(false);
+      return;
+    }
+    
     try {
-      await apiRequest('/service-requests', 'POST', formData);
+      const response = await apiRequest('/service-requests', 'POST', formData);
+      console.log('Service request response:', response);
+      
       setSuccess('Service request submitted successfully!');
       setFormData({
         serviceType: '',
@@ -153,7 +193,8 @@ const ServiceRequestPage = React.memo(() => {
       });
       fetchUserRequests();
     } catch (err) {
-      setError(err.message);
+      console.error('Service request error:', err);
+      setError(err.message || 'Failed to submit service request');
     } finally {
       setLoading(false);
     }
@@ -227,9 +268,8 @@ const ServiceRequestPage = React.memo(() => {
                       <option
                         key={service._id}
                         value={service.name}
-                        className="py-3 px-4 text-blue-900 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 border-b border-blue-100 last:border-b-0"
                       >
-                        {service.name} &nbsp; <span className="text-gray-500">₹{service.basePrice}</span>
+                        {service.name} - ₹{service.basePrice}
                       </option>
                     ))}
                   </select>
@@ -263,8 +303,19 @@ const ServiceRequestPage = React.memo(() => {
                     onChange={handleChange}
                     className="block w-full bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-sm text-base"
                     min={new Date().toISOString().split('T')[0]}
+                    max={new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
                     required
                   />
+                  {formData.preferredDate && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      Selected: {new Date(formData.preferredDate).toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
+                    </div>
+                  )}
                 </div>
                 {/* Preferred Time */}
                 <div>
@@ -279,17 +330,22 @@ const ServiceRequestPage = React.memo(() => {
                     className="block w-full bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-sm text-base"
                     required
                   >
-                    <option value="" disabled>Select Time</option>
-                    <option value="09:00">9:00 AM</option>
-                    <option value="10:00">10:00 AM</option>
-                    <option value="11:00">11:00 AM</option>
-                    <option value="12:00">12:00 PM</option>
-                    <option value="13:00">1:00 PM</option>
-                    <option value="14:00">2:00 PM</option>
-                    <option value="15:00">3:00 PM</option>
-                    <option value="16:00">4:00 PM</option>
-                    <option value="17:00">5:00 PM</option>
+                    <option value="" disabled>Select Time Slot</option>
+                    <option value="09:00-10:00">9:00 AM - 10:00 AM</option>
+                    <option value="10:00-11:00">10:00 AM - 11:00 AM</option>
+                    <option value="11:00-12:00">11:00 AM - 12:00 PM</option>
+                    <option value="12:00-13:00">12:00 PM - 1:00 PM</option>
+                    <option value="13:00-14:00">1:00 PM - 2:00 PM</option>
+                    <option value="14:00-15:00">2:00 PM - 3:00 PM</option>
+                    <option value="15:00-16:00">3:00 PM - 4:00 PM</option>
+                    <option value="16:00-17:00">4:00 PM - 5:00 PM</option>
+                    <option value="17:00-18:00">5:00 PM - 6:00 PM</option>
                   </select>
+                  {formData.preferredTime && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      Selected time slot: {formData.preferredTime}
+                    </div>
+                  )}
                 </div>
               </div>
               {/* Description */}
@@ -353,7 +409,14 @@ const ServiceRequestPage = React.memo(() => {
                             </span>
                           )}
                         </div>
-                        <div className="text-sm text-gray-500">Preferred: {request.preferredDate ? new Date(request.preferredDate).toLocaleDateString() : '-'} {request.preferredTime || ''}</div>
+                        <div className="text-sm text-gray-500">
+                          Preferred: {request.preferredDate ? new Date(request.preferredDate).toLocaleDateString('en-US', { 
+                            weekday: 'short', 
+                            year: 'numeric', 
+                            month: 'short', 
+                            day: 'numeric' 
+                          }) : '-'} {request.preferredTime ? `at ${request.preferredTime}` : ''}
+                        </div>
                         <div className="text-sm text-gray-500">Contact: {request.contactNumber}</div>
                       </div>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium w-max ${statusColors[request.status] || statusColors.default}`}>
