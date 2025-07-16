@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { apiRequest } from '../../utils/api';
+import { io } from 'socket.io-client';
 
 const OrdersPage = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [filter, setFilter] = useState('all');
-    const [lastRefresh, setLastRefresh] = useState(new Date());
-    const [autoRefresh, setAutoRefresh] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
     const [statusUpdates, setStatusUpdates] = useState([]);
     const [showUpdateNotification, setShowUpdateNotification] = useState(false);
     const location = useLocation();
@@ -23,23 +21,23 @@ const OrdersPage = () => {
         }
     }, [location.state]);
 
-    // Auto-refresh orders every 30 seconds
+    // --- Socket.IO real-time updates ---
     useEffect(() => {
-        if (!autoRefresh) return;
-
-        const interval = setInterval(() => {
+        const socket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000', {
+            withCredentials: true,
+        });
+        socket.on('orderStatusChanged', (event) => {
             fetchOrders(true); // Silent refresh
-        }, 30000); // 30 seconds
-
-        return () => clearInterval(interval);
-    }, [autoRefresh]);
+        });
+        return () => {
+            socket.disconnect();
+        };
+    }, []);
 
     const fetchOrders = async (silent = false) => {
         try {
             if (!silent) {
                 setLoading(true);
-            } else {
-                setRefreshing(true);
             }
             const response = await apiRequest('/orders');
             const newOrders = response.data;
@@ -67,24 +65,13 @@ const OrdersPage = () => {
             }
             
             setOrders(newOrders);
-            setLastRefresh(new Date());
         } catch (error) {
             console.error('Error fetching orders:', error);
         } finally {
             if (!silent) {
                 setLoading(false);
-            } else {
-                setRefreshing(false);
             }
         }
-    };
-
-    const handleManualRefresh = async () => {
-        await fetchOrders();
-    };
-
-    const toggleAutoRefresh = () => {
-        setAutoRefresh(!autoRefresh);
     };
 
     const getStatusIcon = (status) => {
@@ -181,38 +168,6 @@ const OrdersPage = () => {
                 
                 {/* Refresh Controls */}
                 <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-600">
-                            Last updated: {formatTime(lastRefresh)}
-                        </span>
-                        <div className="flex items-center space-x-2">
-                            <input
-                                type="checkbox"
-                                id="autoRefresh"
-                                checked={autoRefresh}
-                                onChange={toggleAutoRefresh}
-                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                            />
-                            <label htmlFor="autoRefresh" className="text-sm text-gray-700">
-                                Auto-refresh (30s)
-                            </label>
-                            {autoRefresh && (
-                                <div className="flex items-center">
-                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse ml-2"></div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    <button
-                        onClick={handleManualRefresh}
-                        disabled={loading || refreshing}
-                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                        <svg className={`w-4 h-4 mr-2 ${loading || refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        {loading || refreshing ? 'Refreshing...' : 'Refresh'}
-                    </button>
                     <select
                         value={filter}
                         onChange={(e) => setFilter(e.target.value)}

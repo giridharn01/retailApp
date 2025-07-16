@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { apiRequest } from '../../utils/api';
+import { io } from 'socket.io-client';
 
 const statusOptions = [
   { value: 'pending', label: 'Pending' },
@@ -20,28 +21,25 @@ const AdminOrderManagementPage = () => {
         carrier: '',
         estimatedDelivery: ''
     });
-    const [lastRefresh, setLastRefresh] = useState(new Date());
-    const [autoRefresh, setAutoRefresh] = useState(true);
-    const [previousOrderCount, setPreviousOrderCount] = useState(0);
-    const [newOrdersCount, setNewOrdersCount] = useState(0);
-    const [showNewOrderNotification, setShowNewOrderNotification] = useState(false);
 
     useEffect(() => {
         fetchOrders();
         fetchStats();
     }, []);
 
-    // Auto-refresh orders every 30 seconds
+    // --- Socket.IO real-time updates ---
     useEffect(() => {
-        if (!autoRefresh) return;
-
-        const interval = setInterval(() => {
-            fetchOrders(true); // Silent refresh
+        const socket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000', {
+            withCredentials: true,
+        });
+        socket.on('orderStatusChanged', (event) => {
+            fetchOrders(true);
             fetchStats();
-        }, 30000); // 30 seconds
-
-        return () => clearInterval(interval);
-    }, [autoRefresh]);
+        });
+        return () => {
+            socket.disconnect();
+        };
+    }, []);
 
     const fetchOrders = async (silent = false) => {
         try {
@@ -51,20 +49,7 @@ const AdminOrderManagementPage = () => {
             const response = await apiRequest('/orders');
             const newOrders = response.data;
             
-            // Check for new orders
-            if (silent && orders.length > 0) {
-                const newCount = newOrders.length - previousOrderCount;
-                if (newCount > 0) {
-                    setNewOrdersCount(newCount);
-                    setShowNewOrderNotification(true);
-                    // Auto-hide notification after 5 seconds
-                    setTimeout(() => setShowNewOrderNotification(false), 5000);
-                }
-            }
-            
             setOrders(newOrders);
-            setPreviousOrderCount(newOrders.length);
-            setLastRefresh(new Date());
         } catch (error) {
             console.error('Error fetching orders:', error);
         } finally {
@@ -72,23 +57,6 @@ const AdminOrderManagementPage = () => {
                 setLoading(false);
             }
         }
-    };
-
-    // Initialize order count on first load
-    useEffect(() => {
-        if (orders.length > 0 && previousOrderCount === 0) {
-            setPreviousOrderCount(orders.length);
-        }
-    }, [orders, previousOrderCount]);
-
-    const handleManualRefresh = async () => {
-        setShowNewOrderNotification(false);
-        await fetchOrders();
-        await fetchStats();
-    };
-
-    const toggleAutoRefresh = () => {
-        setAutoRefresh(!autoRefresh);
     };
 
     const fetchStats = async () => {
@@ -136,7 +104,6 @@ const AdminOrderManagementPage = () => {
                 setTimeout(() => {
                     setStatusUpdateSuccess(prev => ({ ...prev, [orderId]: false }));
                 }, 2000);
-                console.log(`Order ${order.orderNumber} status updated to ${status}`);
             }
         } catch (error) {
             console.error('Error updating order status:', error);
@@ -237,24 +204,7 @@ const AdminOrderManagementPage = () => {
     return (
         <div className="max-w-7xl mx-auto px-4 py-8">
             {/* New Order Notification */}
-            {showNewOrderNotification && (
-                <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-3 animate-pulse">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="font-medium">
-                        {newOrdersCount} new order{newOrdersCount > 1 ? 's' : ''} received!
-                    </span>
-                    <button
-                        onClick={() => setShowNewOrderNotification(false)}
-                        className="ml-2 text-white hover:text-gray-200"
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-            )}
+            {/* Removed new order notification as per edit hint */}
 
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold text-gray-900">Order Management</h1>
@@ -263,36 +213,9 @@ const AdminOrderManagementPage = () => {
                 <div className="flex items-center space-x-4">
                     <div className="flex items-center space-x-2">
                         <span className="text-sm text-gray-600">
-                            Last updated: {formatTime(lastRefresh)}
+                            Last updated: {formatTime(new Date())}
                         </span>
-                        <div className="flex items-center space-x-2">
-                            <input
-                                type="checkbox"
-                                id="autoRefresh"
-                                checked={autoRefresh}
-                                onChange={toggleAutoRefresh}
-                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                            />
-                            <label htmlFor="autoRefresh" className="text-sm text-gray-700">
-                                Auto-refresh (30s)
-                            </label>
-                            {autoRefresh && (
-                                <div className="flex items-center">
-                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse ml-2"></div>
-                                </div>
-                            )}
-                        </div>
                     </div>
-                    <button
-                        onClick={handleManualRefresh}
-                        disabled={loading}
-                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                        <svg className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        {loading ? 'Refreshing...' : 'Refresh'}
-                    </button>
                 </div>
             </div>
 

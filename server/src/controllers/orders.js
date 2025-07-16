@@ -242,6 +242,10 @@ exports.createOrder = async (req, res) => {
         });
         await order.save();
 
+        // Emit real-time event
+        const io = req.app.get('io');
+        io.emit('orderStatusChanged', { type: 'created', data: order });
+
         // Clear cart items after successful order (keep the cart entity)
         cart.items = [];
         await cart.save();
@@ -322,6 +326,10 @@ exports.updateOrderStatus = async (req, res) => {
             });
         }
 
+        // Emit real-time event
+        const io = req.app.get('io');
+        io.emit('orderStatusChanged', { type: 'updated', data: updatedOrder });
+
         res.json({
             success: true,
             data: updatedOrder
@@ -380,6 +388,10 @@ exports.cancelOrder = async (req, res) => {
             note: 'Order cancelled by user'
         });
         await order.save();
+
+        // Emit real-time event
+        const io = req.app.get('io');
+        io.emit('orderStatusChanged', { type: 'cancelled', data: order });
 
         res.json({
             success: true,

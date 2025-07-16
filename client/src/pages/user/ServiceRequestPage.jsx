@@ -1,5 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { apiRequest } from '../../utils/api';
+import { io } from 'socket.io-client';
+
+const statusColors = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  'in-progress': 'bg-blue-100 text-blue-800',
+  completed: 'bg-green-100 text-green-800',
+  cancelled: 'bg-red-100 text-red-800',
+  default: 'bg-gray-100 text-gray-800',
+};
 
 const ServiceRequestPage = React.memo(() => {
   const [loading, setLoading] = useState(false);
@@ -7,11 +16,9 @@ const ServiceRequestPage = React.memo(() => {
   const [success, setSuccess] = useState('');
   const [serviceTypes, setServiceTypes] = useState([]);
   const [serviceRequests, setServiceRequests] = useState([]);
-  const [lastRefresh, setLastRefresh] = useState(new Date());
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [statusUpdates, setStatusUpdates] = useState([]);
   const [showUpdateNotification, setShowUpdateNotification] = useState(false);
+  const prevRequestsRef = useRef([]);
 
   const [formData, setFormData] = useState({
     serviceType: '',
@@ -31,22 +38,21 @@ const ServiceRequestPage = React.memo(() => {
     }
   }, []);
 
-  // Fetch user's service requests
+  // Fetch user's service requests (no dependency on serviceRequests)
   const fetchUserRequests = useCallback(async (silent = false) => {
     try {
       if (!silent) {
         setLoading(true);
-      } else {
-        setRefreshing(true);
       }
       const res = await apiRequest('/service-requests/user');
       const newRequests = res.data || [];
-      
-      // Check for status changes if this is a silent refresh
-      if (silent && serviceRequests.length > 0) {
+
+      // Compare with previous requests for status changes
+      const prevRequests = prevRequestsRef.current;
+      if (silent && prevRequests.length > 0) {
         const updates = [];
         newRequests.forEach(newRequest => {
-          const oldRequest = serviceRequests.find(r => r._id === newRequest._id);
+          const oldRequest = prevRequests.find(r => r._id === newRequest._id);
           if (oldRequest && oldRequest.status !== newRequest.status) {
             updates.push({
               serviceType: newRequest.serviceType,
@@ -55,43 +61,45 @@ const ServiceRequestPage = React.memo(() => {
             });
           }
         });
-        
         if (updates.length > 0) {
           setStatusUpdates(updates);
           setShowUpdateNotification(true);
-          // Auto-hide notification after 5 seconds
           setTimeout(() => setShowUpdateNotification(false), 5000);
         }
       }
-      
       setServiceRequests(newRequests);
-      setLastRefresh(new Date());
+      prevRequestsRef.current = newRequests;
     } catch (err) {
       setError('Failed to fetch your service requests');
     } finally {
       if (!silent) {
         setLoading(false);
-      } else {
-        setRefreshing(false);
       }
     }
-  }, [serviceRequests]);
+  }, []);
 
   useEffect(() => {
     fetchServiceData();
     fetchUserRequests();
   }, [fetchServiceData, fetchUserRequests]);
 
-  // Auto-refresh service requests every 30 seconds
+  // --- Socket.IO real-time updates ---
   useEffect(() => {
-    if (!autoRefresh) return;
+    // Connect to Socket.IO server
+    const socket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000', {
+      withCredentials: true,
+    });
 
-    const interval = setInterval(() => {
+    // Listen for service request status changes
+    socket.on('serviceRequestStatusChanged', (event) => {
+      // Optionally filter for relevant events (e.g., only for this user)
       fetchUserRequests(true); // Silent refresh
-    }, 30000); // 30 seconds
+    });
 
-    return () => clearInterval(interval);
-  }, [autoRefresh]);
+    return () => {
+      socket.disconnect();
+    };
+  }, [fetchUserRequests]);
 
   const handleChange = useCallback((e) => {
     setFormData({
@@ -99,14 +107,6 @@ const ServiceRequestPage = React.memo(() => {
       [e.target.name]: e.target.value
     });
   }, [formData]);
-
-  const handleManualRefresh = async () => {
-    await fetchUserRequests();
-  };
-
-  const toggleAutoRefresh = () => {
-    setAutoRefresh(!autoRefresh);
-  };
 
   const formatTime = (dateString) => {
     return new Date(dateString).toLocaleTimeString('en-IN', {
@@ -153,7 +153,7 @@ const ServiceRequestPage = React.memo(() => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+      <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Status Update Notification */}
         {showUpdateNotification && (
           <div className="fixed top-4 right-4 z-50 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-3 animate-pulse">
@@ -180,48 +180,55 @@ const ServiceRequestPage = React.memo(() => {
             </button>
           </div>
         )}
-
-        <h2 className="text-3xl font-bold text-gray-900 mb-2 text-center">Request a Service</h2>
-        <p className="text-gray-600 text-center mb-8">Fill out the form to request a new service. You can also view your previous requests below.</p>
-
+        {/* Header Section */}
+        <div className="mb-10 text-center">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Request a Service</h1>
+          <p className="text-gray-600 mb-2">Fill out the form to request a new service. You can also view your previous requests below.</p>
+          <div className="w-16 h-1 bg-blue-600 rounded mx-auto" />
+        </div>
         <div className="flex flex-col lg:flex-row gap-8">
           {/* New Request Form */}
-          <div className="flex-1 bg-white shadow rounded-lg p-6">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">New Service Request</h3>
+          <div className="flex-1 bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">New Service Request</h2>
             {error && (
               <div className="mb-4 rounded-md bg-red-50 p-3 text-red-700 text-sm">{error}</div>
             )}
             {success && (
               <div className="mb-4 rounded-md bg-green-50 p-3 text-green-700 text-sm">{success}</div>
             )}
-            <form onSubmit={handleSubmit} className="space-y-6">
+            {/* --- Card-style form for Service Request --- */}
+            {/* The form is already inside a card container. Update the form fields: */}
+            <form onSubmit={handleSubmit} className="space-y-6 w-full max-w-xl">
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 {/* Service Type */}
                 <div>
-                  <label htmlFor="serviceType" className="block text-sm font-medium text-gray-700">
-                    Service Type *
+                  <label htmlFor="serviceType" className="block text-sm font-semibold text-gray-700 mb-2">
+                    Service Type <span className="text-red-500">*</span>
                   </label>
                   <select
                     id="serviceType"
                     name="serviceType"
                     value={formData.serviceType}
                     onChange={handleChange}
-                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                    className="block w-full bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-sm text-base font-medium"
                     required
                   >
-                    <option value="">Select Service Type</option>
+                    <option value="" disabled className="text-gray-400">Select Service Type</option>
                     {serviceTypes.map((service) => (
-                      <option key={service._id} value={service.name}>
-                        {service.name} - ₹{service.basePrice}
+                      <option
+                        key={service._id}
+                        value={service.name}
+                        className="py-3 px-4 text-blue-900 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 border-b border-blue-100 last:border-b-0"
+                      >
+                        {service.name} &nbsp; <span className="text-gray-500">₹{service.basePrice}</span>
                       </option>
                     ))}
                   </select>
                 </div>
-
                 {/* Contact Number */}
                 <div>
-                  <label htmlFor="contactNumber" className="block text-sm font-medium text-gray-700">
-                    Contact Number *
+                  <label htmlFor="contactNumber" className="block text-sm font-semibold text-gray-700 mb-2">
+                    Contact Number <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="tel"
@@ -229,16 +236,15 @@ const ServiceRequestPage = React.memo(() => {
                     name="contactNumber"
                     value={formData.contactNumber}
                     onChange={handleChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="block w-full bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-sm text-base"
                     placeholder="Your phone number"
                     required
                   />
                 </div>
-
                 {/* Preferred Date */}
                 <div>
-                  <label htmlFor="preferredDate" className="block text-sm font-medium text-gray-700">
-                    Preferred Date *
+                  <label htmlFor="preferredDate" className="block text-sm font-semibold text-gray-700 mb-2">
+                    Preferred Date <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
@@ -246,26 +252,25 @@ const ServiceRequestPage = React.memo(() => {
                     name="preferredDate"
                     value={formData.preferredDate}
                     onChange={handleChange}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="block w-full bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-sm text-base"
                     min={new Date().toISOString().split('T')[0]}
                     required
                   />
                 </div>
-
                 {/* Preferred Time */}
                 <div>
-                  <label htmlFor="preferredTime" className="block text-sm font-medium text-gray-700">
-                    Preferred Time *
+                  <label htmlFor="preferredTime" className="block text-sm font-semibold text-gray-700 mb-2">
+                    Preferred Time <span className="text-red-500">*</span>
                   </label>
                   <select
                     id="preferredTime"
                     name="preferredTime"
                     value={formData.preferredTime}
                     onChange={handleChange}
-                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                    className="block w-full bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-sm text-base"
                     required
                   >
-                    <option value="">Select Time</option>
+                    <option value="" disabled>Select Time</option>
                     <option value="09:00">9:00 AM</option>
                     <option value="10:00">10:00 AM</option>
                     <option value="11:00">11:00 AM</option>
@@ -278,11 +283,10 @@ const ServiceRequestPage = React.memo(() => {
                   </select>
                 </div>
               </div>
-
               {/* Description */}
               <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                  Service Description *
+                <label htmlFor="description" className="block text-sm font-semibold text-gray-700 mb-2">
+                  Service Description <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   id="description"
@@ -290,74 +294,40 @@ const ServiceRequestPage = React.memo(() => {
                   value={formData.description}
                   onChange={handleChange}
                   rows={4}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="block w-full bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-sm text-base resize-none"
                   placeholder="Please describe the issue or service you need..."
                   required
                 />
               </div>
-
               <div className="flex justify-end">
                 <button
                   type="submit"
                   disabled={loading}
-                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex justify-center py-2 px-6 border border-transparent shadow-sm text-base font-semibold rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
                   {loading ? 'Submitting...' : 'Submit Request'}
                 </button>
               </div>
             </form>
           </div>
-
           {/* Service Requests List */}
-          <div className="flex-1 bg-white shadow rounded-lg p-6 mt-8 lg:mt-0">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-gray-800">Your Service Requests</h3>
-              
-              {/* Refresh Controls */}
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-600">
-                    Last updated: {formatTime(lastRefresh)}
-                  </span>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="autoRefresh"
-                      checked={autoRefresh}
-                      onChange={toggleAutoRefresh}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <label htmlFor="autoRefresh" className="text-sm text-gray-700">
-                      Auto-refresh (30s)
-                    </label>
-                    {autoRefresh && (
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse ml-2"></div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={handleManualRefresh}
-                  disabled={loading || refreshing}
-                  className="inline-flex items-center px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  <svg className={`w-3 h-3 mr-1 ${loading || refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  {loading || refreshing ? 'Refreshing...' : 'Refresh'}
-                </button>
-              </div>
+          <div className="flex-1 bg-white rounded-lg shadow-md p-6 mt-8 lg:mt-0">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+              <h2 className="text-xl font-semibold text-gray-800">Your Service Requests</h2>
             </div>
             {serviceRequests.length === 0 ? (
-              <div className="text-gray-500 text-center">You have not submitted any service requests yet.</div>
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">🛠️</div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">No service requests found</h2>
+                <p className="text-gray-600">You haven't submitted any service requests yet.</p>
+              </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {serviceRequests.map((request) => (
-                  <div key={request._id} className={`border rounded-lg p-4 bg-gray-50 ${isRecentUpdate(request) ? 'ring-2 ring-blue-500 ring-opacity-50' : ''}`}>
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                  <div key={request._id} className={`bg-white rounded-lg shadow-md overflow-hidden ${isRecentUpdate(request) ? 'ring-2 ring-blue-500 ring-opacity-50' : ''}`}>
+                    <div className="p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                       <div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 mb-1">
                           <div className="font-medium text-blue-700">{request.serviceType}</div>
                           {isRecentUpdate(request) && (
                             <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
@@ -371,19 +341,13 @@ const ServiceRequestPage = React.memo(() => {
                         <div className="text-sm text-gray-500">Preferred: {request.preferredDate ? new Date(request.preferredDate).toLocaleDateString() : '-'} {request.preferredTime || ''}</div>
                         <div className="text-sm text-gray-500">Contact: {request.contactNumber}</div>
                       </div>
-                      <span className={`px-2 py-1 rounded text-xs font-semibold w-max ${
-                        request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        request.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
-                        request.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        request.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium w-max ${statusColors[request.status] || statusColors.default}`}>
                         {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                       </span>
                     </div>
-                    <div className="mt-2 text-gray-700 text-sm">{request.description}</div>
+                    <div className="px-4 pb-4 text-gray-700 text-sm">{request.description}</div>
                     {request.statusHistory && request.statusHistory.length > 1 && (
-                      <div className="mt-2 text-xs text-gray-500">
+                      <div className="px-4 pb-4 text-xs text-gray-500">
                         <span>Status history: </span>
                         {request.statusHistory.map((h, idx) => (
                           <span key={idx}>{h.status}{idx < request.statusHistory.length - 1 ? ', ' : ''}</span>
