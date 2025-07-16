@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { apiRequest } from '../../utils/api';
 import { io } from 'socket.io-client';
+import { io } from 'socket.io-client';
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -85,15 +86,29 @@ const ServiceRequestPage = React.memo(() => {
 
   // --- Socket.IO real-time updates ---
   useEffect(() => {
-    // Connect to Socket.IO server
-    const socket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000', {
+    // Connect to Socket.IO server (remove /api from URL since Socket.IO is on root)
+    const socketUrl = process.env.REACT_APP_API_URL 
+      ? process.env.REACT_APP_API_URL.replace('/api', '')
+      : 'http://localhost:5000';
+    
+    const socket = io(socketUrl, {
       withCredentials: true,
     });
 
+    console.log('Connecting to Socket.IO at:', socketUrl);
+
     // Listen for service request status changes
     socket.on('serviceRequestStatusChanged', (event) => {
-      // Optionally filter for relevant events (e.g., only for this user)
+      console.log('Status update received:', event);
       fetchUserRequests(true); // Silent refresh
+    });
+
+    socket.on('connect', () => {
+      console.log('Socket.IO connected successfully');
+    });
+
+    socket.on('connect_error', (error) => {
+      console.log('Socket.IO connection error:', error);
     });
 
     return () => {

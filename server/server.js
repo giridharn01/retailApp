@@ -4,6 +4,8 @@ const connectDB = require('./src/config/db');
 require('dotenv').config();
 const http = require('http');
 const { Server } = require('socket.io');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
 
