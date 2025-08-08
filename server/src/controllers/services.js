@@ -127,6 +127,8 @@ exports.createServiceRequest = async (req, res) => {
             contactNumber
         });
 
+        console.log('Service request created successfully:', serviceRequest);
+
         res.status(201).json({
             success: true,
             data: serviceRequest

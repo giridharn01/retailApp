@@ -45,8 +45,13 @@ const ServiceRequestPage = React.memo(() => {
       if (!silent) {
         setLoading(true);
       }
+      
+      console.log('Fetching user service requests...');
       const res = await apiRequest('/service-requests/user');
+      console.log('Service requests response:', res);
+      
       const newRequests = res.data || [];
+      console.log('New requests:', newRequests);
 
       // Compare with previous requests for status changes
       const prevRequests = prevRequestsRef.current;
@@ -74,6 +79,7 @@ const ServiceRequestPage = React.memo(() => {
         setLastUpdated(new Date());
       }
     } catch (err) {
+      console.error('Error fetching service requests:', err);
       setError('Failed to fetch your service requests');
     } finally {
       if (!silent) {
@@ -83,6 +89,10 @@ const ServiceRequestPage = React.memo(() => {
   }, []);
 
   useEffect(() => {
+    console.log('Component mounted, checking authentication...');
+    const token = localStorage.getItem('token');
+    console.log('Token exists:', !!token);
+    
     fetchServiceData();
     fetchUserRequests();
   }, [fetchServiceData, fetchUserRequests]);

@@ -91,11 +91,11 @@ const ProductDetailPage = React.memo(() => {
         <div className="lg:grid lg:grid-cols-2 lg:gap-x-8">
           {/* Product Image */}
           <div className="lg:max-w-lg lg:self-end">
-            <div className="aspect-w-1 aspect-h-1 rounded-lg overflow-hidden">
+            <div className="aspect-w-1 aspect-h-1 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
               <img
                 src={product.image}
                 alt={product.name}
-                className="w-full h-full object-center object-cover"
+                className="max-w-full max-h-full object-contain"
               />
             </div>
           </div>

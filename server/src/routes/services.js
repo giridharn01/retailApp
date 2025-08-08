@@ -18,9 +18,15 @@ router.route('/')
 // Get service requests for current user only
 router.get('/user', protect, customerOnly, async (req, res) => {
     try {
+        console.log('Fetching service requests for user:', req.user.id);
+        
         const serviceRequests = await ServiceRequest.find({ user: req.user.id })
             .populate('user', 'name email')
-            .populate('technician', 'name email');
+            .populate('technician', 'name email')
+            .sort({ createdAt: -1 }); // Sort by newest first
+
+        console.log('Found service requests:', serviceRequests.length);
+        console.log('Service requests data:', serviceRequests);
 
         res.json({
             success: true,
@@ -28,6 +34,7 @@ router.get('/user', protect, customerOnly, async (req, res) => {
             data: serviceRequests
         });
     } catch (error) {
+        console.error('Error fetching service requests:', error);
         res.status(500).json({
             success: false,
             error: error.message

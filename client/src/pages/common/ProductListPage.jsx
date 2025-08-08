@@ -138,11 +138,11 @@ const ProductListPage = React.memo(() => {
                 to={`/products/${product._id}`}
                 className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300"
               >
-                <div className="aspect-w-1 aspect-h-1 w-full">
+                <div className="w-full h-48 bg-gray-100 flex items-center justify-center overflow-hidden">
                   <img
                     src={product.image || '/placeholder.png'}
                     alt={product.name}
-                    className="w-full h-48 object-cover"
+                    className="max-w-full max-h-full object-contain"
                   />
                 </div>
                 <div className="p-4">

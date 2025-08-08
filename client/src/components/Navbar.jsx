@@ -31,7 +31,7 @@ const Navbar = () => {
   }, []);
 
   return (
-    <nav className="bg-white shadow-lg relative z-40">
+    <nav className="bg-indigo- shadow-lg relative z-40">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
@@ -43,9 +43,14 @@ const Navbar = () => {
                 Products
               </Link>
               {user && !isAdmin && (
-                <Link to="/service-request" className="inline-flex items-center px-1 pt-1 text-gray-500 hover:text-gray-700">
-                  Service Request
-                </Link>
+                <>
+                  <Link to="/service-request" className="inline-flex items-center px-1 pt-1 text-gray-500 hover:text-gray-700">
+                    Service Request
+                  </Link>
+                  <Link to="/orders" className="inline-flex items-center px-1 pt-1 text-gray-500 hover:text-gray-700">
+                    My Orders
+                  </Link>
+                </>
               )}
               {isAdmin && (
                 <div className="flex space-x-8">
@@ -106,16 +111,6 @@ const Navbar = () => {
                         >
                           Your Profile
                         </Link>
-                        {!isAdmin && (
-                          <Link
-                            to="/orders"
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            role="menuitem"
-                            onClick={() => setIsUserMenuOpen(false)}
-                          >
-                            My Orders
-                          </Link>
-                        )}
                         {isAdmin && (
                           <Link
                             to="/admin"
@@ -196,12 +191,20 @@ const Navbar = () => {
             Products
           </Link>
           {user && !isAdmin && (
-            <Link
-              to="/service-request"
-              className="block pl-3 pr-4 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-            >
-              Service Request
-            </Link>
+            <>
+              <Link
+                to="/service-request"
+                className="block pl-3 pr-4 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+              >
+                Service Request
+              </Link>
+              <Link
+                to="/orders"
+                className="block pl-3 pr-4 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+              >
+                My Orders
+              </Link>
+            </>
           )}
           {isAdmin && (
             <>
