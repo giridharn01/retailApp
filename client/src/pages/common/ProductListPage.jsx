@@ -36,8 +36,12 @@ const ProductListPage = React.memo(() => {
       });
 
       const res = await apiRequest(`/products?${queryParams}`);
+      console.log('Products API Response:', res);
+      console.log('Total products:', res.total);
+      console.log('Current page products:', res.data?.length);
+      console.log('Query params:', queryParams.toString());
       setProducts(res.data || []);
-      setTotalPages(Math.ceil((res.count || 0) / productsPerPage));
+      setTotalPages(Math.ceil((res.total || 0) / productsPerPage));
     } catch (err) {
       setError(err.message);
       setProducts([]);
