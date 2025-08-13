@@ -55,7 +55,7 @@ const AdminOrderManagementPage = () => {
             if (!silent) {
                 setLoading(true);
             }
-            const response = await apiRequest('/orders');
+            const response = await apiRequest('/orders?limit=1000');
             const newOrders = response.data;
             
             setOrders(newOrders);

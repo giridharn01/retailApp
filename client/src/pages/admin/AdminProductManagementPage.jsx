@@ -19,7 +19,9 @@ const AdminProductManagementPage = React.memo(() => {
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await apiRequest('/products');
+      // Add high limit to get all products for admin
+      const res = await apiRequest('/products?limit=1000');
+      console.log('Admin products response:', res);
       setProducts(res.data || []);
     } catch (err) {
       setError(err.message);

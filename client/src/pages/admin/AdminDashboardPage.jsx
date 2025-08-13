@@ -22,10 +22,10 @@ const AdminDashboardPage = () => {
     try {
       setLoading(true);
       const [productsRes, serviceRequestsRes, usersRes] = await Promise.all([
-        apiRequest('/products'),
+        apiRequest('/products?limit=1000'),
         // apiRequest('/orders'),
-        apiRequest('/service-requests'),
-        apiRequest('/users')
+        apiRequest('/service-requests?limit=1000'),
+        apiRequest('/users?limit=1000')
       ]);
 
       const pendingRequests = serviceRequestsRes.data.filter(req => req.status === 'pending').length;

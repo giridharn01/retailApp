@@ -23,7 +23,7 @@ const AdminServiceRequestManagementPage = React.memo(() => {
   const fetchRequests = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await apiRequest('/service-requests');
+      const res = await apiRequest('/service-requests?limit=1000');
       setRequests(res.data || []);
     } catch (err) {
       setError(err.message);
