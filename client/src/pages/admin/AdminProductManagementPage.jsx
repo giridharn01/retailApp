@@ -7,6 +7,7 @@ const AdminProductManagementPage = React.memo(() => {
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -15,6 +16,14 @@ const AdminProductManagementPage = React.memo(() => {
     stock: '',
     image: ''
   });
+
+  // Toast notification function
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: '' });
+    }, 3000);
+  };
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -60,14 +69,17 @@ const AdminProductManagementPage = React.memo(() => {
       if (editingProduct) {
         await apiRequest(`/products/${editingProduct._id}`, 'PUT', formData);
         setProducts(prev => prev.map(p => p._id === editingProduct._id ? { ...p, ...formData } : p));
+        showToast(`Product "${formData.name}" updated successfully!`, 'success');
       } else {
         const res = await apiRequest('/products', 'POST', formData);
         setProducts(prev => [...prev, res.data]);
+        showToast(`Product "${formData.name}" added successfully!`, 'success');
       }
       setIsModalOpen(false);
       resetForm();
     } catch (err) {
       setError(err.message);
+      showToast(`Error: ${err.message}`, 'error');
     }
   };
 
@@ -88,10 +100,13 @@ const AdminProductManagementPage = React.memo(() => {
     if (!window.confirm('Are you sure you want to delete this product?')) return;
     
     try {
+      const productToDelete = products.find(p => p._id === productId);
       await apiRequest(`/products/${productId}`, 'DELETE');
       setProducts(prev => prev.filter(p => p._id !== productId));
+      showToast(`Product "${productToDelete?.name || 'Unknown'}" deleted successfully!`, 'success');
     } catch (err) {
       setError(err.message);
+      showToast(`Error deleting product: ${err.message}`, 'error');
     }
   };
 
@@ -338,6 +353,27 @@ const AdminProductManagementPage = React.memo(() => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed bottom-4 right-4 z-50">
+          <div className={`px-6 py-4 rounded-lg shadow-lg max-w-sm ${
+            toast.type === 'success' ? 'bg-green-500 text-white' : 
+            toast.type === 'error' ? 'bg-red-500 text-white' : 
+            'bg-blue-500 text-white'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">{toast.message}</span>
+              <button
+                onClick={() => setToast({ show: false, message: '', type: 'success' })}
+                className="ml-4 text-white hover:text-gray-200"
+              >
+                ×
+              </button>
             </div>
           </div>
         </div>
