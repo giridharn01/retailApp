@@ -46,6 +46,7 @@ app.use('/orders', require('./src/routes/orders'));
 app.use('/service-requests', require('./src/routes/services'));
 app.use('/service-types', require('./src/routes/serviceTypes'));
 app.use('/equipment-types', require('./src/routes/equipmentTypes'));
+app.use('/reports', require('./src/routes/reports'));
 
 // Basic route for checking if the server is running
 app.get('/', (req, res) => {

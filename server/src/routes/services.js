@@ -15,8 +15,8 @@ router.route('/')
     .get(protect, authorize('admin'), getServiceRequests)
     .post(protect, customerOnly, createServiceRequest);
 
-// Get service requests for current user only
-router.get('/user', protect, customerOnly, async (req, res) => {
+// Get service requests for current user only (both customers and admins can access their profile)
+router.get('/user', protect, async (req, res) => {
     try {
         console.log('Fetching service requests for user:', req.user.id);
         

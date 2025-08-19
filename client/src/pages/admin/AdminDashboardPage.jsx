@@ -113,6 +113,13 @@ const AdminDashboardPage = () => {
       icon: '⚙️',
       link: '/admin/service-types',
       color: 'bg-gray-50 hover:bg-gray-100'
+    },
+    {
+      title: 'Reports & Analytics',
+      description: 'View sales and service reports for analysis',
+      icon: '📊',
+      link: '/admin/reports',
+      color: 'bg-green-50 hover:bg-green-100'
     }
   ];
 

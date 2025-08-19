@@ -66,6 +66,9 @@ const Navbar = () => {
                   <Link to="/admin/orders" className="inline-flex items-center px-1 pt-1 text-gray-500 hover:text-gray-700">
                     Orders
                   </Link>
+                  <Link to="/admin/reports" className="inline-flex items-center px-1 pt-1 text-gray-500 hover:text-gray-700">
+                    Reports
+                  </Link>
                 </div>
               )}
             </div>
@@ -231,6 +234,12 @@ const Navbar = () => {
                 className="block pl-3 pr-4 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
               >
                 Orders
+              </Link>
+              <Link
+                to="/admin/reports"
+                className="block pl-3 pr-4 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+              >
+                Reports
               </Link>
             </>
           )}

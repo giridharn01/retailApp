@@ -23,6 +23,7 @@ const AdminOrderManagementPage = lazy(() => import('./pages/admin/AdminOrderMana
 const AdminServiceRequestManagementPage = lazy(() => import('./pages/admin/AdminServiceRequestManagementPage'));
 const AdminServiceTypesPage = lazy(() => import('./pages/admin/AdminServiceTypesPage'));
 const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage'));
+const AdminReportsPage = lazy(() => import('./pages/admin/AdminReportsPage'));
 
 // Protected Route component
 const PrivateRoute = ({ children, requireAdmin = false }) => {
@@ -94,6 +95,7 @@ function App() {
                 <Route path="/admin/service-requests" element={<PrivateRoute requireAdmin><AdminServiceRequestManagementPage /></PrivateRoute>} />
                 <Route path="/admin/service-types" element={<PrivateRoute requireAdmin><AdminServiceTypesPage /></PrivateRoute>} />
                 <Route path="/admin/users" element={<PrivateRoute requireAdmin><AdminUsersPage /></PrivateRoute>} />
+                <Route path="/admin/reports" element={<PrivateRoute requireAdmin><AdminReportsPage /></PrivateRoute>} />
               </Routes>
             </Suspense>
           </main>
