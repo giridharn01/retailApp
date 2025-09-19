@@ -37,6 +37,12 @@ const ProductListPage = React.memo(() => {
       return;
     }
 
+    // Rate limiting for production
+    if (window.lastSuggestionRequest && Date.now() - window.lastSuggestionRequest < 200) {
+      return; // Skip if too frequent
+    }
+    window.lastSuggestionRequest = Date.now();
+
     try {
       const res = await apiRequest(`/products/suggestions?q=${encodeURIComponent(term)}`);
       const suggestionList = res.data || [];
@@ -53,14 +59,6 @@ const ProductListPage = React.memo(() => {
     try {
       setLoading(true);
       setIsSearching(true);
-      
-      // Cancel previous search if user is still typing
-      if (searchTerm !== debouncedSearchTerm && searchTerm.includes(debouncedSearchTerm)) {
-        console.log('Skipping search - user still typing...');
-        setLoading(false);
-        setIsSearching(false);
-        return;
-      }
       
       const queryParams = new URLSearchParams({
         page: currentPage,
@@ -86,61 +84,83 @@ const ProductListPage = React.memo(() => {
       
       // Maintain focus on search input after results load
       setTimeout(() => {
-        if (searchInputRef.current && isSearchFocused) {
-          searchInputRef.current.focus();
+        if (searchInputRef.current && isSearchFocused && document.activeElement !== searchInputRef.current) {
+          try {
+            searchInputRef.current.focus();
+          } catch (e) {
+            // Ignore focus errors in production
+          }
         }
       }, 50);
     }
-  }, [currentPage, debouncedSearchTerm, selectedCategory, sortBy, searchTerm, isSearchFocused]);
+  }, [currentPage, debouncedSearchTerm, selectedCategory, sortBy, isSearchFocused]);
 
   // No automatic debounce - only search on Enter or explicit trigger
   const triggerSearch = useCallback(() => {
     setDebouncedSearchTerm(searchTerm);
     setCurrentPage(1);
-    // Keep focus on input after search
+    // Keep focus on input after search with better error handling
     setTimeout(() => {
-      if (searchInputRef.current) {
-        searchInputRef.current.focus();
+      if (searchInputRef.current && document.activeElement !== searchInputRef.current) {
+        try {
+          searchInputRef.current.focus();
+        } catch (e) {
+          // Ignore focus errors in production
+        }
       }
     }, 100);
   }, [searchTerm]);
 
   // Handle Enter key press for search
-  const handleKeyDown = (e) => {
+  const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       triggerSearch();
       setShowSuggestions(false); // Hide suggestions after search
     }
-  };
+  }, [triggerSearch]);
 
-  // Fetch suggestions immediately while user is typing (no debounce)
+  // Proper debounced search for consistent behavior in production
   useEffect(() => {
-    // Immediate suggestions for every character change
-    if (searchTerm.length >= 1) {
-      fetchSuggestions(searchTerm);
-    } else {
-      setSuggestions([]);
-      setShowSuggestions(false);
-    }
-  }, [searchTerm, fetchSuggestions]);
-
-  useEffect(() => {
-    fetchCategories();
-    // Initial load - fetch all products
-    setDebouncedSearchTerm('');
-  }, [fetchCategories]);
-
-  useEffect(() => {
+    // Only trigger search when debouncedSearchTerm changes
     fetchProducts();
   }, [fetchProducts]);
 
-  // Maintain focus during search operations
+  // Debounced suggestions (faster than search)
+  useEffect(() => {
+    const suggestionTimer = setTimeout(() => {
+      if (searchTerm.length >= 1) {
+        fetchSuggestions(searchTerm);
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }, 300); // 300ms delay for suggestions
+
+    return () => clearTimeout(suggestionTimer);
+  }, [searchTerm, fetchSuggestions]);
+
+  // Initial load and category fetch
+  useEffect(() => {
+    fetchCategories();
+    // Initial load - fetch all products without search term
+    const initialLoad = async () => {
+      setDebouncedSearchTerm(''); // This will trigger fetchProducts
+    };
+    initialLoad();
+  }, [fetchCategories]);
+
+  // Maintain focus during search operations - with production safety
   useEffect(() => {
     if (isSearchFocused && searchInputRef.current && document.activeElement !== searchInputRef.current) {
       const shouldMaintainFocus = searchTerm.length > 0 || showSuggestions;
       if (shouldMaintainFocus) {
-        searchInputRef.current.focus();
+        try {
+          searchInputRef.current.focus();
+        } catch (e) {
+          // Ignore focus errors in production
+          console.warn('Focus error ignored:', e);
+        }
       }
     }
   }, [isSearchFocused, searchTerm, showSuggestions]);
@@ -155,7 +175,7 @@ const ProductListPage = React.memo(() => {
     setCurrentPage(1);
   };
 
-  const handleSearchChange = (e) => {
+  const handleSearchChange = useCallback((e) => {
     const newValue = e.target.value;
     setSearchTerm(newValue);
     setCurrentPage(1); // Reset to first page when search changes
@@ -164,9 +184,9 @@ const ProductListPage = React.memo(() => {
     if (!isSearchFocused) {
       setIsSearchFocused(true);
     }
-  };
+  }, [isSearchFocused]);
 
-  const handleSuggestionClick = (suggestion) => {
+  const handleSuggestionClick = useCallback((suggestion) => {
     setSearchTerm(suggestion);
     setShowSuggestions(false);
     setIsSearchFocused(true);
@@ -181,7 +201,7 @@ const ProductListPage = React.memo(() => {
         searchInputRef.current.focus();
       }
     }, 10);
-  };
+  }, []);
 
   const handleSearchFocus = () => {
     setIsSearchFocused(true);
