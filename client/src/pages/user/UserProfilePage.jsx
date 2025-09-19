@@ -15,19 +15,21 @@ const UserProfilePage = React.memo(() => {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
-  const [serviceRequests, setServiceRequests] = useState([]);
+  // Removed service requests from profile per requirements
+  // const [serviceRequests, setServiceRequests] = useState([]);
 
   // Check if user is admin
   const isAdmin = user?.role === 'admin';
 
-  const fetchServiceRequests = useCallback(async () => {
-    try {
-      const res = await apiRequest('/service-requests/user');
-      setServiceRequests(res.data);
-    } catch (err) {
-      setError('Failed to fetch service requests');
-    }
-  }, []);
+  // Removed service requests tab and data fetching
+  // const fetchServiceRequests = useCallback(async () => {
+  //   try {
+  //     const res = await apiRequest('/service-requests/user');
+  //     setServiceRequests(res.data);
+  //   } catch (err) {
+  //     setError('Failed to fetch service requests');
+  //   }
+  // }, []);
 
   useEffect(() => {
     if (user) {
@@ -37,11 +39,9 @@ const UserProfilePage = React.memo(() => {
         email: user.email || ''
       }));
       // Only fetch service requests for non-admin users
-      if (!isAdmin) {
-        fetchServiceRequests();
-      }
+      // No longer fetching service requests in profile page
     }
-  }, [user, isAdmin, fetchServiceRequests]);
+  }, [user, isAdmin]);
 
   const handleChange = useCallback((e) => {
     setFormData(prev => ({
@@ -127,18 +127,7 @@ const UserProfilePage = React.memo(() => {
             >
               Change Password
             </button>
-            {!isAdmin && (
-              <button
-                onClick={() => setActiveTab('services')}
-                className={`${
-                  activeTab === 'services'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-              >
-                Service Requests
-              </button>
-            )}
+            {/* Service Requests tab removed */}
           </nav>
         </div>
       </div>
@@ -234,34 +223,7 @@ const UserProfilePage = React.memo(() => {
         </form>
       )}
 
-      {activeTab === 'services' && !isAdmin && (
-        <div className="space-y-4">
-          {serviceRequests.length === 0 ? (
-            <p className="text-gray-500">No service requests found.</p>
-          ) : (
-            serviceRequests.map(request => (
-              <div key={request._id} className="border rounded-lg p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-lg font-medium">{request.serviceType}</h3>
-                    <p className="text-sm text-gray-500">Vehicle: {request.vehicleType} {request.vehicleModel}</p>
-                    <p className="text-sm text-gray-500">Preferred Date: {new Date(request.preferredDate).toLocaleDateString()}</p>
-                  </div>
-                  <span className={`px-2 py-1 rounded text-sm ${
-                    request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    request.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
-                    request.status === 'completed' ? 'bg-green-100 text-green-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                  </span>
-                </div>
-                <p className="mt-2 text-gray-600">{request.description}</p>
-              </div>
-            ))
-          )}
-        </div>
-      )}
+      {/* Service Requests section removed */}
     </div>
   );
 });

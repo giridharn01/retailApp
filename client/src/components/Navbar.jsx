@@ -42,12 +42,13 @@ const Navbar = () => {
               <Link to="/products" className="inline-flex items-center px-1 pt-1 text-gray-500 hover:text-gray-700">
                 Products
               </Link>
-              {user && !isAdmin && (
+              {/* For customers: show links; for guests: show same links but they go to login */}
+              {(!isAdmin) && (
                 <>
-                  <Link to="/service-request" className="inline-flex items-center px-1 pt-1 text-gray-500 hover:text-gray-700">
+                  <Link to={user ? "/service-request" : "/login"} className="inline-flex items-center px-1 pt-1 text-gray-500 hover:text-gray-700">
                     Service Request
                   </Link>
-                  <Link to="/orders" className="inline-flex items-center px-1 pt-1 text-gray-500 hover:text-gray-700">
+                  <Link to={user ? "/orders" : "/login"} className="inline-flex items-center px-1 pt-1 text-gray-500 hover:text-gray-700">
                     My Orders
                   </Link>
                 </>
@@ -75,10 +76,11 @@ const Navbar = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            {user && !isAdmin && (
-              <Link to="/cart" className="relative inline-flex items-center px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md text-sm font-medium transition-colors">
+            {/* Cart: visible for customers; guests see it but redirect to login */}
+            {!isAdmin && (
+              <Link to={user ? "/cart" : "/login"} className="relative inline-flex items-center px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md text-sm font-medium transition-colors">
                 Cart
-                {getCartItemCount() > 0 && (
+                {user && getCartItemCount() > 0 && (
                   <span className="ml-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                     {getCartItemCount()}
                   </span>
@@ -137,7 +139,14 @@ const Navbar = () => {
                 </div>
               </div>
             ) : (
+              // Guest view: show a profile icon that leads to login alongside Login/Register
               <div className="flex items-center space-x-3">
+                <Link to="/login" className="flex items-center justify-center h-8 w-8 rounded-full bg-gray-100 text-gray-500 hover:text-gray-700">
+                  {/* Simple user icon */}
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a8.25 8.25 0 1115 0v.75H4.5v-.75z" />
+                  </svg>
+                </Link>
                 <Link
                   to="/login"
                   className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-100 transition-colors"
@@ -193,19 +202,26 @@ const Navbar = () => {
           >
             Products
           </Link>
-          {user && !isAdmin && (
+          {/* Mobile: show same links for guests but route to login */}
+          {!isAdmin && (
             <>
               <Link
-                to="/service-request"
+                to={user ? "/service-request" : "/login"}
                 className="block pl-3 pr-4 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
               >
                 Service Request
               </Link>
               <Link
-                to="/orders"
+                to={user ? "/orders" : "/login"}
                 className="block pl-3 pr-4 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
               >
                 My Orders
+              </Link>
+              <Link
+                to={user ? "/cart" : "/login"}
+                className="block pl-3 pr-4 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+              >
+                Cart
               </Link>
             </>
           )}

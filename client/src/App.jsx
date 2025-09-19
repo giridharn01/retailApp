@@ -74,7 +74,10 @@ function App() {
             <Suspense fallback={<div className="flex justify-center items-center min-h-[40vh]"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div></div>}>
               <Routes>
                 {/* Common Routes */}
-                <Route path="/" element={<HomePage />} />
+                {/* Make product list the landing page */}
+                <Route path="/" element={<ProductListPage />} />
+                {/* Preserve HomePage at /home in case anything links to it */}
+                <Route path="/home" element={<HomePage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/products" element={<ProductListPage />} />

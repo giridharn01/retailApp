@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '../../utils/api';
+import { exportToCsv } from '../../utils/exportCsv';
 
 const AdminProductManagementPage = React.memo(() => {
   const [products, setProducts] = useState([]);
@@ -136,6 +137,23 @@ const AdminProductManagementPage = React.memo(() => {
               className="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               Add New Product
+            </button>
+            <button
+              onClick={() => {
+                const columns = [
+                  { key: 'name', header: 'Name' },
+                  { key: 'category', header: 'Category' },
+                  { key: 'price', header: 'Price' },
+                  { key: 'stock', header: 'Stock' },
+                  { key: 'description', header: 'Description' },
+                  { key: 'image', header: 'Image URL' },
+                  { key: (row) => row._id, header: 'ID' }
+                ];
+                exportToCsv('products.csv', products, columns);
+              }}
+              className="ml-3 inline-flex items-center px-4 py-2 border border-blue-600 text-blue-600 rounded-md shadow-sm text-sm font-medium hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Export CSV
             </button>
           </div>
         </div>

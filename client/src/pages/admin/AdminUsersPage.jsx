@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '../../utils/api';
+import { exportToCsv } from '../../utils/exportCsv';
 
 const AdminUsersPage = () => {
   const [users, setUsers] = useState([]);
@@ -87,6 +88,21 @@ const AdminUsersPage = () => {
                 </svg>
               </div>
             </div>
+            <button
+              onClick={() => {
+                const columns = [
+                  { key: 'name', header: 'Name' },
+                  { key: 'email', header: 'Email' },
+                  { key: 'role', header: 'Role' },
+                  { key: (row) => new Date(row.createdAt).toISOString(), header: 'Created At' },
+                  { key: (row) => row._id, header: 'ID' }
+                ];
+                exportToCsv('users.csv', users, columns);
+              }}
+              className="inline-flex items-center px-4 py-2 border border-blue-600 text-blue-600 rounded-md shadow-sm text-sm font-medium hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Export CSV
+            </button>
           </div>
         </div>
 

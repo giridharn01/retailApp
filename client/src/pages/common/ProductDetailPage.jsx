@@ -53,13 +53,7 @@ const ProductDetailPage = React.memo(() => {
     }
   };
 
-  const handleContact = () => {
-    // You can implement this based on your needs:
-    // 1. Open a contact form
-    // 2. Navigate to a contact page
-    // 3. Show a modal with contact information
-    window.location.href = `mailto:contact@autoparts.com?subject=Inquiry about ${product.name}`;
-  };
+  // Removed deprecated 'Contact for Purchase' flow per requirements.
 
   if (loading) {
     return (
@@ -171,15 +165,8 @@ const ProductDetailPage = React.memo(() => {
                   >
                     Manage Products
                   </button>
-                ) : (
-              <button
-                onClick={handleContact}
-                    className="flex-1 bg-blue-600 border border-transparent rounded-md py-3 px-8 flex items-center justify-center text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Contact for Purchase
-              </button>
-                )}
-                
+                ) : null}
+
                 {!user && (
                   <button
                     onClick={() => navigate('/login')}

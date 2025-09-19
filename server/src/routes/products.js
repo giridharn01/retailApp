@@ -7,12 +7,14 @@ const {
     updateProduct,
     deleteProduct,
     getLowStockProducts,
-    getCategories
+    getCategories,
+    getSearchSuggestions
 } = require('../controllers/products');
 const { protect, authorize } = require('../middleware/auth');
 
 // Specific routes must come before parameterized routes
 router.get('/categories', getCategories);
+router.get('/suggestions', getSearchSuggestions);
 router.get('/low-stock', protect, authorize('admin'), getLowStockProducts);
 
 router.route('/')
